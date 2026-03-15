@@ -394,8 +394,8 @@ footer {
 
 <header>
   <div class="logo">
-    <div class="logo-icon">CC</div>
-    Paingdakon
+    <div class="logo-icon">PD</div>
+    paingdakon
   </div>
   <div class="header-right">
     <div class="online-badge"><div class="dot"></div>online</div>
@@ -580,10 +580,9 @@ async function fetchBin(bin) {
   const c=bin.replace(/x/gi,'0').replace(/\D/g,'').slice(0,6);
   if(CACHE[c])return CACHE[c];
   const apis=[
-    [`https://lookup.binlist.net/${c}`,'bl'],
-    [`https://binsapi.vercel.app/api/bin/${c}`,'g'],
-    [`https://api.freebinchecker.com/bin/${c}`,'g'],
     [`https://data.handyapi.com/bin/${c}`,'ha'],
+    [`https://lookup.binlist.net/${c}`,'bl'],
+    [`https://api.freebinchecker.com/bin/${c}`,'g'],
   ];
   for(const[url,src]of apis){
     try{
