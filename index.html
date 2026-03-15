@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NakornGen — Card Generator</title>
+<title>Paingdakon — Card Generator</title>
 <meta name="description" content="Credit card number generator for testing and development. Uses Luhn algorithm.">
 <meta name="theme-color" content="#0d1117">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%233fb950'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='white' font-family='monospace' font-size='14' font-weight='bold'%3ECC%3C/text%3E%3C/svg%3E">
@@ -37,7 +37,7 @@
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;height:100%}
 
 body {
   background: var(--bg);
@@ -46,6 +46,8 @@ body {
   font-size: 14px;
   line-height: 1.5;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   transition: background .2s, color .2s;
 }
 
@@ -53,6 +55,8 @@ body {
 header {
   position: sticky; top: 0; z-index: 100;
   background: var(--surface);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
   height: 52px;
   padding: 0 clamp(1rem,4vw,1.5rem);
@@ -108,6 +112,7 @@ header {
 
 /* Layout */
 .wrap {
+  flex: 1;
   max-width: 640px;
   margin: 0 auto;
   padding: clamp(1rem,4vw,2rem) clamp(1rem,4vw,1.5rem);
@@ -389,8 +394,8 @@ footer {
 
 <header>
   <div class="logo">
-    <div class="logo-icon">N</div>
-    NakornGen
+    <div class="logo-icon">CC</div>
+    Paingdakon
   </div>
   <div class="header-right">
     <div class="online-badge"><div class="dot"></div>online</div>
@@ -428,7 +433,7 @@ footer {
           <select id="yearSel">
             <option value="">Random</option>
             <option>2026</option><option>2027</option><option>2028</option>
-            <option>2029</option><option>2030</option><option>2031</option>
+            <option>2029</option><option>2030</option><option>2031</option><option>2032</option><option>2033</option><option>2034</option>
           </select>
         </div>
         <div>
@@ -564,7 +569,7 @@ function genCard(p) {
   while(d.length<ft)d.push(Math.floor(Math.random()*10));
   const no=luhnComplete(d.slice(0,ft)).join('');
   const mo=p.month||String(Math.floor(Math.random()*12)+1).padStart(2,'0');
-  const yr=p.year||String(new Date().getFullYear()+Math.floor(Math.random()*6));
+  const yr=p.year||String(new Date().getFullYear()+Math.floor(Math.random()*9));
   const cv=p.cvv||(amex?String(Math.floor(Math.random()*9000)+1000):String(Math.floor(Math.random()*900)+100));
   return`${no}|${mo}|${yr}|${cv}`;
 }
@@ -582,12 +587,15 @@ async function fetchBin(bin) {
   ];
   for(const[url,src]of apis){
     try{
-      const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0','Accept-Version':'3'}});
+      const ctrl=new AbortController();
+      const tid=setTimeout(()=>ctrl.abort(),8000);
+      const r=await fetch(url,{signal:ctrl.signal});
+      clearTimeout(tid);
       if(!r.ok)continue;
       const d=await r.json();
       let res;
       if(src==='bl') res={ok:true,bank:(d.bank?.name||'UNKNOWN').toUpperCase(),brand:(d.scheme||'UNKNOWN').toUpperCase(),type:`${d.type||''} ${d.brand||''}`.toUpperCase().trim(),country:(d.country?.name||'UNKNOWN').toUpperCase(),flag:d.country?.emoji||'',currency:d.country?.currency||'USD'};
-      else if(src==='ha') res={ok:true,bank:(d.Issuer||'UNKNOWN').toUpperCase(),brand:(d.Scheme||'UNKNOWN').toUpperCase(),type:`${d.Type||''} ${d.Scheme||''}`.toUpperCase().trim(),country:(d.CountryName||'UNKNOWN').toUpperCase(),flag:d.CountryFlag||'',currency:d.Currency||'USD'};
+      else if(src==='ha') res={ok:true,bank:(d.Issuer||'UNKNOWN').toUpperCase(),brand:(d.Scheme||'UNKNOWN').toUpperCase(),type:`${d.Type||''} ${d.Scheme||''}`.toUpperCase().trim(),country:(d.Country?.Name||d.CountryName||'UNKNOWN').toUpperCase(),flag:'',currency:d.Country?.ISD||d.Currency||'USD'};
       else res={ok:true,bank:(d.bank||d.Issuer||'UNKNOWN').toUpperCase(),brand:(d.scheme||d.Scheme||'UNKNOWN').toUpperCase(),type:(d.type||d.Type||'').toUpperCase(),country:(d.country||d.CountryName||'UNKNOWN').toUpperCase(),flag:'',currency:d.currency||d.Currency||'USD'};
       if(res.brand!=='UNKNOWN'||res.bank!=='UNKNOWN'){CACHE[c]=res;return res;}
     }catch{continue;}
@@ -605,46 +613,54 @@ async function generate() {
   const btn=document.getElementById('genBtn');
   btn.disabled=true; btn.textContent='Generating...';
 
-  const cards=Array.from({length:amount},()=>genCard(p));
-  const list=document.getElementById('cardsList');
-  list.innerHTML='';
-  cards.forEach((card,i)=>{
-    const row=document.createElement('div');
-    row.className='card-row';
-    row.style.animationDelay=`${i*18}ms`;
-    row.innerHTML=`<span class="card-num">${card}</span><button class="cp-btn" onclick="cpOne('${card}',this)">copy</button>`;
-    list.appendChild(row);
-  });
+  try{
+    const cards=Array.from({length:amount},()=>genCard(p));
+    const list=document.getElementById('cardsList');
+    list.innerHTML='';
+    cards.forEach((card,i)=>{
+      const row=document.createElement('div');
+      row.className='card-row';
+      row.style.animationDelay=`${i*18}ms`;
+      const safeCard=card.replace(/&/g,'&amp;');
+      row.innerHTML=`<span class="card-num">${safeCard}</span><button class="cp-btn" data-card="${safeCard}" onclick="cpOne(this)">copy</button>`;
+      list.appendChild(row);
+    });
 
-  document.getElementById('resLabel').textContent=`${amount} cards generated`;
-  document.getElementById('resTime').textContent=new Date().toLocaleString();
-  document.getElementById('resCard').style.display='block';
+    document.getElementById('resLabel').textContent=`${amount} cards generated`;
+    document.getElementById('resTime').textContent=new Date().toLocaleString();
+    document.getElementById('resCard').style.display='block';
 
-  document.getElementById('iNet').innerHTML='<span class="spinner"></span>';
-  document.getElementById('iBank').textContent='Loading...';
-  document.getElementById('iType').textContent='Loading...';
-  document.getElementById('iCountry').textContent='Loading...';
-  document.getElementById('binCard').style.display='block';
+    document.getElementById('iNet').innerHTML='<span class="spinner"></span>';
+    document.getElementById('iBank').textContent='Loading...';
+    document.getElementById('iType').textContent='Loading...';
+    document.getElementById('iCountry').textContent='Loading...';
+    document.getElementById('binCard').style.display='block';
 
-  const info=await fetchBin(p.bin);
-  const net=(info.ok&&info.brand!=='UNKNOWN')?info.brand:network(p.bin);
-  document.getElementById('iNet').innerHTML=`<span class="net-tag t-${net}">${net}</span>`;
-  document.getElementById('iBank').textContent=info.ok?info.bank:'—';
-  document.getElementById('iType').textContent=(info.ok&&info.type)?info.type:'—';
-  document.getElementById('iCountry').textContent=info.ok?(info.flag?`${info.country} ${info.flag} ${info.currency}`:`${info.country} ${info.currency}`):'—';
-  btn.disabled=false; btn.textContent='Generate Cards';
+    const info=await fetchBin(p.bin);
+    const net=(info.ok&&info.brand!=='UNKNOWN')?info.brand:network(p.bin);
+    document.getElementById('iNet').innerHTML=`<span class="net-tag t-${net}">${net}</span>`;
+    document.getElementById('iBank').textContent=info.ok?info.bank:'—';
+    document.getElementById('iType').textContent=(info.ok&&info.type)?info.type:'—';
+    document.getElementById('iCountry').textContent=info.ok?(info.flag?`${info.country} ${info.flag} ${info.currency}`:`${info.country} ${info.currency}`):'—';
+  }catch(e){
+    console.error('Generate error:',e);
+    toast('Something went wrong. Please try again.');
+  }finally{
+    btn.disabled=false; btn.textContent='Generate Cards';
+  }
 }
 
-function cpOne(text,btn){
+function cpOne(btn){
+  const text=btn.getAttribute('data-card');
   navigator.clipboard.writeText(text).then(()=>{
     btn.textContent='copied'; btn.classList.add('ok');
     setTimeout(()=>{btn.textContent='copy';btn.classList.remove('ok');},1500);
-  });
+  }).catch(()=>toast('copy failed — try manually'));
 }
 
 function copyAll(){
   const all=[...document.querySelectorAll('.card-num')].map(e=>e.textContent).join('\n');
-  navigator.clipboard.writeText(all).then(()=>toast('all cards copied'));
+  navigator.clipboard.writeText(all).then(()=>toast('all cards copied')).catch(()=>toast('copy failed — try manually'));
 }
 
 document.getElementById('binInput').addEventListener('keydown',e=>{if(e.key==='Enter')generate();});
