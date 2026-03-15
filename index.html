@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NakornGen — Card Generator</title>
+<meta name="description" content="Credit card number generator for testing and development. Uses Luhn algorithm.">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%233fb950'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='white' font-family='monospace' font-size='14' font-weight='bold'%3ECC%3C/text%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+[data-theme="dark"] {
+  --bg:      #0d1117;
+  --surface: #161b22;
+  --border:  #21262d;
+  --border2: #30363d;
+  --accent:  #3fb950;
+  --acc-bg:  #3fb95015;
+  --text:    #e6edf3;
+  --text2:   #8b949e;
+  --muted:   #484f58;
+  --danger:  #f85149;
+  --input:   #0d1117;
+}
+[data-theme="light"] {
+  --bg:      #ffffff;
+  --surface: #f6f8fa;
+  --border:  #d0d7de;
+  --border2: #afb8c1;
+  --accent:  #1a7f37;
+  --acc-bg:  #1a7f3715;
+  --text:    #1f2328;
+  --text2:   #656d76;
+  --muted:   #8c959f;
+  --danger:  #cf222e;
+  --input:   #ffffff;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+  transition: background .2s, color .2s;
+}
+
+/* Header */
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  height: 52px;
+  padding: 0 clamp(1rem,4vw,1.5rem);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.logo {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; font-weight: 500;
+  color: var(--text);
+}
+
+.logo-icon {
+  width: 24px; height: 24px;
+  background: var(--accent);
+  border-radius: 4px;
+  display: grid; place-items: center;
+  font-size: 10px; font-weight: 600;
+  color: #fff;
+}
+
+.header-right { display: flex; align-items: center; gap: 8px; }
+
+.online-badge {
+  display: flex; align-items: center; gap: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--text2);
+}
+
+.dot {
+  width: 6px; height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: blink 2s infinite;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.icon-btn {
+  width: 32px; height: 32px;
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  cursor: pointer;
+  display: grid; place-items: center;
+  color: var(--text2);
+  font-size: 13px;
+  transition: all .15s;
+}
+
+.icon-btn:hover { border-color: var(--accent); color: var(--text); }
+
+/* Layout */
+.wrap {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: clamp(1rem,4vw,2rem) clamp(1rem,4vw,1.5rem);
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+/* Card */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.card-head {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px; font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text2);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.card-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+/* Form */
+label {
+  display: block;
+  font-size: 11px; font-weight: 500;
+  color: var(--text2);
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+input[type=text], select {
+  width: 100%;
+  background: var(--input);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 7px 11px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  -webkit-appearance: none;
+}
+
+input:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--acc-bg);
+}
+
+input::placeholder { color: var(--muted); }
+
+select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%238b949e' d='M5 6L0 0h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+select option { background: var(--surface); }
+
+.row3 {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 10px;
+}
+
+@media(max-width:420px){ .row3 { grid-template-columns: 1fr 1fr; } }
+
+/* Amount */
+.amt-row { display: flex; gap: 6px; }
+
+.amt-btn {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 6px 4px;
+  color: var(--text2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all .15s;
+  text-align: center;
+}
+
+.amt-btn:hover { color: var(--text); border-color: var(--border2); }
+.amt-btn.on { background: var(--acc-bg); border-color: var(--accent); color: var(--accent); }
+
+/* Gen button */
+.gen-btn {
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px; font-weight: 500;
+  cursor: pointer;
+  transition: opacity .15s, transform .15s;
+}
+
+.gen-btn:hover { opacity: .88; transform: translateY(-1px); }
+.gen-btn:active { transform: translateY(0); }
+.gen-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+/* BIN Info */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+}
+
+@media(max-width:380px){ .info-grid { grid-template-columns: 1fr; } }
+
+.info-row { display: flex; flex-direction: column; gap: 3px; }
+
+.info-key {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--muted);
+}
+
+.info-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--text);
+}
+
+.net-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px; font-weight: 500;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: .05em;
+}
+
+.t-VISA       {background:#1f6feb22;color:#58a6ff;border:1px solid #1f6feb44}
+.t-MASTERCARD {background:#da363322;color:#f85149;border:1px solid #da363344}
+.t-AMEX       {background:#1f7a8822;color:#39d0d8;border:1px solid #1f7a8844}
+.t-DISCOVER   {background:#9e6a0322;color:#e3b341;border:1px solid #9e6a0344}
+.t-JCB        {background:#2ea04322;color:#3fb950;border:1px solid #2ea04344}
+.t-DINERS     {background:#6e768122;color:#8b949e;border:1px solid #6e768144}
+.t-UNIONPAY   {background:#b62a2222;color:#ff7b72;border:1px solid #b62a2244}
+.t-MAESTRO    {background:#6e408022;color:#c084fc;border:1px solid #6e408044}
+.t-MIR        {background:#1a3a7a22;color:#6699ff;border:1px solid #1a3a7a44}
+.t-RUPAY      {background:#7a1a1a22;color:#ff9966;border:1px solid #7a1a1a44}
+.t-UNKNOWN    {background:#30363d22;color:#6e7681;border:1px solid #30363d44}
+
+/* Results */
+.res-bar {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.res-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--text2);
+}
+
+.copy-all {
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  padding: 4px 10px;
+  color: var(--text2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.copy-all:hover { border-color: var(--accent); color: var(--accent); }
+
+.cards-list {
+  padding: 8px;
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 380px; overflow-y: auto;
+}
+
+.cards-list::-webkit-scrollbar { width: 3px; }
+.cards-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.card-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 11px;
+  animation: fadeUp .18s ease both;
+  transition: border-color .15s;
+}
+
+.card-row:hover { border-color: var(--border2); }
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(4px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.card-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--text);
+  flex: 1; word-break: break-all;
+  user-select: all;
+}
+
+.cp-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 3px 8px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+
+.cp-btn:hover { border-color: var(--border2); color: var(--text2); }
+.cp-btn.ok { color: var(--accent); border-color: var(--acc-bg); }
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Error */
+.err { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--danger); margin-top:5px; display:none; }
+.err.show { display:block; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 20px; left: 50%;
+  transform: translateX(-50%) translateY(60px);
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--accent);
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+  z-index: 999; pointer-events: none;
+}
+
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* Footer */
+footer {
+  text-align: center;
+  padding: 20px;
+  font-size: 11px; color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  border-top: 1px solid var(--border);
+  letter-spacing: .05em;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">N</div>
+    NakornGen
+  </div>
+  <div class="header-right">
+    <div class="online-badge"><div class="dot"></div>online</div>
+    <button class="icon-btn" id="themeBtn" onclick="toggleTheme()">☀</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <div class="card-head">Generator</div>
+    <div class="card-body">
+
+      <div>
+        <label>BIN / Pattern</label>
+        <input type="text" id="binInput"
+          placeholder="469308  ·  469308|12|27|123  ·  4693XXXX"
+          autocomplete="off" spellcheck="false" inputmode="text">
+        <div class="err" id="errMsg">Enter a valid BIN (6+ digits)</div>
+      </div>
+
+      <div class="row3">
+        <div>
+          <label>Month</label>
+          <select id="monthSel">
+            <option value="">Random</option>
+            <option>01</option><option>02</option><option>03</option>
+            <option>04</option><option>05</option><option>06</option>
+            <option>07</option><option>08</option><option>09</option>
+            <option>10</option><option>11</option><option>12</option>
+          </select>
+        </div>
+        <div>
+          <label>Year</label>
+          <select id="yearSel">
+            <option value="">Random</option>
+            <option>2026</option><option>2027</option><option>2028</option>
+            <option>2029</option><option>2030</option><option>2031</option>
+          </select>
+        </div>
+        <div>
+          <label>CVV</label>
+          <input type="text" id="cvvInput" placeholder="Random" maxlength="4" autocomplete="off" inputmode="numeric">
+        </div>
+      </div>
+
+      <div>
+        <label>Amount</label>
+        <div class="amt-row">
+          <button class="amt-btn" onclick="setAmt(1,this)">1</button>
+          <button class="amt-btn" onclick="setAmt(5,this)">5</button>
+          <button class="amt-btn on" onclick="setAmt(10,this)">10</button>
+          <button class="amt-btn" onclick="setAmt(20,this)">20</button>
+          <button class="amt-btn" onclick="setAmt(50,this)">50</button>
+        </div>
+      </div>
+
+      <button class="gen-btn" id="genBtn" onclick="generate()">Generate Cards</button>
+
+    </div>
+  </div>
+
+  <div class="card" id="binCard" style="display:none">
+    <div class="card-head">BIN Info</div>
+    <div class="card-body">
+      <div class="info-grid">
+        <div class="info-row"><span class="info-key">Network</span><span class="info-val" id="iNet">—</span></div>
+        <div class="info-row"><span class="info-key">Bank</span><span class="info-val" id="iBank">—</span></div>
+        <div class="info-row"><span class="info-key">Type</span><span class="info-val" id="iType">—</span></div>
+        <div class="info-row"><span class="info-key">Country</span><span class="info-val" id="iCountry">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="resCard" style="display:none">
+    <div class="res-bar">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <span class="res-label" id="resLabel">Results</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)" id="resTime"></span>
+      </div>
+      <button class="copy-all" onclick="copyAll()">Copy All</button>
+    </div>
+    <div class="cards-list" id="cardsList"></div>
+  </div>
+
+</div>
+
+<footer>for testing & development only — generated cards are not real</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+let amount = 10;
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const dark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', dark ? 'light' : 'dark');
+  document.getElementById('themeBtn').textContent = dark ? '☾' : '☀';
+  localStorage.setItem('ccgen-theme', dark ? 'light' : 'dark');
+}
+
+(function(){
+  const t = localStorage.getItem('ccgen-theme') ||
+    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn').textContent = t === 'dark' ? '☀' : '☾';
+})();
+
+function setAmt(n, el) {
+  amount = n;
+  document.querySelectorAll('.amt-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+function luhnComplete(d) {
+  const p = [...d].reverse();
+  for (let i = 0; i < p.length; i += 2) { p[i] *= 2; if (p[i] > 9) p[i] -= 9; }
+  return [...d, (10 - (p.reduce((a,b)=>a+b,0)%10))%10];
+}
+
+function isAmex(b) { return /^3[47]/.test(b.replace(/x/gi,'0')); }
+
+function network(bin) {
+  const b = bin.replace(/x/gi,'0');
+  if (/^4/.test(b))              return 'VISA';
+  if (/^5[1-5]/.test(b))        return 'MASTERCARD';
+  if (/^2[2-7]/.test(b))        return 'MASTERCARD';
+  if (/^3[47]/.test(b))         return 'AMEX';
+  if (/^6011/.test(b))          return 'DISCOVER';
+  if (/^64[4-9]/.test(b))       return 'DISCOVER';
+  if (/^65/.test(b))            return 'DISCOVER';
+  if (/^62/.test(b))            return 'UNIONPAY';
+  if (/^6[37]/.test(b))         return 'MAESTRO';
+  if (/^35(2[89]|[3-8])/.test(b)) return 'JCB';
+  if (/^3[068]/.test(b))        return 'DINERS';
+  if (/^220[0-4]/.test(b))      return 'MIR';
+  if (/^60(80|69)/.test(b))     return 'RUPAY';
+  return 'UNKNOWN';
+}
+
+function parse(raw) {
+  const t = raw.toLowerCase().trim();
+  const p = t.split(/[|\/]/);
+  let bin=null,month=null,year=null,cvv=null;
+  const bm=(p[0]||'').match(/[0-9x]{6,16}/i); if(bm) bin=bm[0];
+  if(p[1]){const v=parseInt(p[1]);if(v>=1&&v<=12)month=String(v).padStart(2,'0');}
+  if(p[2]){const y=p[2].trim();if(/^\d{2,4}$/.test(y))year=y.length===4?y:`20${y}`;}
+  if(p[3]){const c=p[3].trim();if(/^\d{3,4}$/.test(c))cvv=c;}
+  const um=document.getElementById('monthSel').value;
+  const uy=document.getElementById('yearSel').value;
+  const uc=document.getElementById('cvvInput').value.trim();
+  if(um)month=um; if(uy)year=uy;
+  if(uc&&/^\d{3,4}$/.test(uc))cvv=uc;
+  return{bin,month,year,cvv};
+}
+
+function genCard(p) {
+  const raw=p.bin||'469308', amex=isAmex(raw), ft=amex?14:15;
+  const d=[];
+  for(const ch of raw.toLowerCase()){
+    if(ch==='x')d.push(Math.floor(Math.random()*10));
+    else if(/\d/.test(ch))d.push(parseInt(ch));
+  }
+  while(d.length<ft)d.push(Math.floor(Math.random()*10));
+  const no=luhnComplete(d.slice(0,ft)).join('');
+  const mo=p.month||String(Math.floor(Math.random()*12)+1).padStart(2,'0');
+  const yr=p.year||String(new Date().getFullYear()+Math.floor(Math.random()*6));
+  const cv=p.cvv||(amex?String(Math.floor(Math.random()*9000)+1000):String(Math.floor(Math.random()*900)+100));
+  return`${no}|${mo}|${yr}|${cv}`;
+}
+
+const CACHE={};
+
+async function fetchBin(bin) {
+  const c=bin.replace(/x/gi,'0').replace(/\D/g,'').slice(0,6);
+  if(CACHE[c])return CACHE[c];
+  const apis=[
+    [`https://lookup.binlist.net/${c}`,'bl'],
+    [`https://binsapi.vercel.app/api/bin/${c}`,'g'],
+    [`https://api.freebinchecker.com/bin/${c}`,'g'],
+    [`https://data.handyapi.com/bin/${c}`,'ha'],
+  ];
+  for(const[url,src]of apis){
+    try{
+      const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0','Accept-Version':'3'}});
+      if(!r.ok)continue;
+      const d=await r.json();
+      let res;
+      if(src==='bl') res={ok:true,bank:(d.bank?.name||'UNKNOWN').toUpperCase(),brand:(d.scheme||'UNKNOWN').toUpperCase(),type:`${d.type||''} ${d.brand||''}`.toUpperCase().trim(),country:(d.country?.name||'UNKNOWN').toUpperCase(),flag:d.country?.emoji||'',currency:d.country?.currency||'USD'};
+      else if(src==='ha') res={ok:true,bank:(d.Issuer||'UNKNOWN').toUpperCase(),brand:(d.Scheme||'UNKNOWN').toUpperCase(),type:`${d.Type||''} ${d.Scheme||''}`.toUpperCase().trim(),country:(d.CountryName||'UNKNOWN').toUpperCase(),flag:d.CountryFlag||'',currency:d.Currency||'USD'};
+      else res={ok:true,bank:(d.bank||d.Issuer||'UNKNOWN').toUpperCase(),brand:(d.scheme||d.Scheme||'UNKNOWN').toUpperCase(),type:(d.type||d.Type||'').toUpperCase(),country:(d.country||d.CountryName||'UNKNOWN').toUpperCase(),flag:'',currency:d.currency||d.Currency||'USD'};
+      if(res.brand!=='UNKNOWN'||res.bank!=='UNKNOWN'){CACHE[c]=res;return res;}
+    }catch{continue;}
+  }
+  return{ok:false};
+}
+
+async function generate() {
+  const raw=document.getElementById('binInput').value.trim();
+  const err=document.getElementById('errMsg');
+  const p=parse(raw);
+  if(!raw||!p.bin){err.classList.add('show');return;}
+  err.classList.remove('show');
+
+  const btn=document.getElementById('genBtn');
+  btn.disabled=true; btn.textContent='Generating...';
+
+  const cards=Array.from({length:amount},()=>genCard(p));
+  const list=document.getElementById('cardsList');
+  list.innerHTML='';
+  cards.forEach((card,i)=>{
+    const row=document.createElement('div');
+    row.className='card-row';
+    row.style.animationDelay=`${i*18}ms`;
+    row.innerHTML=`<span class="card-num">${card}</span><button class="cp-btn" onclick="cpOne('${card}',this)">copy</button>`;
+    list.appendChild(row);
+  });
+
+  document.getElementById('resLabel').textContent=`${amount} cards generated`;
+  document.getElementById('resTime').textContent=new Date().toLocaleString();
+  document.getElementById('resCard').style.display='block';
+
+  document.getElementById('iNet').innerHTML='<span class="spinner"></span>';
+  document.getElementById('iBank').textContent='Loading...';
+  document.getElementById('iType').textContent='Loading...';
+  document.getElementById('iCountry').textContent='Loading...';
+  document.getElementById('binCard').style.display='block';
+
+  const info=await fetchBin(p.bin);
+  const net=(info.ok&&info.brand!=='UNKNOWN')?info.brand:network(p.bin);
+  document.getElementById('iNet').innerHTML=`<span class="net-tag t-${net}">${net}</span>`;
+  document.getElementById('iBank').textContent=info.ok?info.bank:'—';
+  document.getElementById('iType').textContent=(info.ok&&info.type)?info.type:'—';
+  document.getElementById('iCountry').textContent=info.ok?(info.flag?`${info.country} ${info.flag} ${info.currency}`:`${info.country} ${info.currency}`):'—';
+  btn.disabled=false; btn.textContent='Generate Cards';
+}
+
+function cpOne(text,btn){
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent='copied'; btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='copy';btn.classList.remove('ok');},1500);
+  });
+}
+
+function copyAll(){
+  const all=[...document.querySelectorAll('.card-num')].map(e=>e.textContent).join('\n');
+  navigator.clipboard.writeText(all).then(()=>toast('all cards copied'));
+}
+
+document.getElementById('binInput').addEventListener('keydown',e=>{if(e.key==='Enter')generate();});
+document.getElementById('binInput').addEventListener('input',()=>document.getElementById('errMsg').classList.remove('show'));
+</script>
+</body>
+</html>
